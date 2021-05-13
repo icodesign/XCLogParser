@@ -139,6 +139,23 @@ public final class ParserBuildSteps {
                 totalWarnings += warnings.count
                 targetWarnings += warnings.count
             }
+            let subSections = logSection.subSections
+            let start = logSection.timeStartedRecording
+            let stop = logSection.timeStoppedRecording
+//            let subSections = logSection.subSections.filter { logSection -> Bool in
+//                if type == .target {
+//                    let detailType = DetailStepType.getDetailType(signature: logSection.signature)
+//                    return detailType != .other
+//                } else {
+//                    return true
+//                }
+//            }
+//            let start = subSections.min { (lhs, rhs) -> Bool in
+//                lhs.timeStartedRecording < rhs.timeStartedRecording
+//            }?.timeStartedRecording ?? logSection.timeStartedRecording
+//            let stop = subSections.max { (lhs, rhs) -> Bool in
+//                lhs.timeStoppedRecording < rhs.timeStoppedRecording
+//            }?.timeStoppedRecording ?? logSection.timeStoppedRecording
             var step = BuildStep(type: type,
                                  machineName: machineName,
                                  buildIdentifier: self.buildIdentifier,
@@ -147,12 +164,12 @@ public final class ParserBuildSteps {
                                  domain: logSection.domainType,
                                  title: type == .target ? getTargetName(logSection.title) : logSection.title,
                                  signature: logSection.signature,
-                                 startDate: toDate(timeInterval: logSection.timeStartedRecording),
-                                 endDate: toDate(timeInterval: logSection.timeStoppedRecording),
-                                 startTimestamp: toTimestampSince1970(timeInterval: logSection.timeStartedRecording),
-                                 endTimestamp: toTimestampSince1970(timeInterval: logSection.timeStoppedRecording),
-                                 duration: getDuration(startTimeInterval: logSection.timeStartedRecording,
-                                                       endTimeInterval: logSection.timeStoppedRecording),
+                                 startDate: toDate(timeInterval: start),
+                                 endDate: toDate(timeInterval: stop),
+                                 startTimestamp: toTimestampSince1970(timeInterval: start),
+                                 endTimestamp: toTimestampSince1970(timeInterval: stop),
+                                 duration: getDuration(startTimeInterval: start,
+                                                       endTimeInterval: stop),
                                  detailStepType: detailType,
                                  buildStatus: buildStatus,
                                  schema: schema,
@@ -174,7 +191,7 @@ public final class ParserBuildSteps {
                                  swiftTypeCheckTimes: nil
                                  )
 
-            step.subSteps = try logSection.subSections.map { subSection -> BuildStep in
+            step.subSteps = try subSections.map { subSection -> BuildStep in
                 let subType: BuildStepType = type == .main ? .target : .detail
                 return try parseLogSection(logSection: subSection,
                                            type: subType,
@@ -366,26 +383,32 @@ public final class ParserBuildSteps {
 
     private func addCompilationTimesToTarget(_ target: BuildStep) -> BuildStep {
 
-        let lastCompilationStep = target.subSteps
+        let compilationSteps = target.subSteps
             .filter { $0.isCompilationStep() && $0.fetchedFromCache == false }
+        let lastCompilationStep = compilationSteps
             .max { $0.compilationEndTimestamp < $1.compilationEndTimestamp }
-        guard let lastStep = lastCompilationStep else {
+        let firstCompilationStep = compilationSteps
+            .min { $0.compilationEndTimestamp < $1.compilationEndTimestamp }
+        guard let lastStep = lastCompilationStep, let firstStep = firstCompilationStep else {
             return target.with(newCompilationEndTimestamp: target.startTimestamp, andCompilationDuration: 0.0)
         }
         return target.with(newCompilationEndTimestamp: lastStep.compilationEndTimestamp,
-                         andCompilationDuration: lastStep.compilationEndTimestamp - target.startTimestamp)
+                           andCompilationDuration: lastStep.compilationEndTimestamp - firstStep.compilationEndTimestamp + firstStep.compilationDuration)
     }
 
     private func addCompilationTimesToApp(_ app: BuildStep) -> BuildStep {
-        let lastCompilationStep = app.subSteps
+        let compilationSteps = app.subSteps
             .filter { $0.compilationDuration > 0 && $0.fetchedFromCache == false }
+        let lastCompilationStep = compilationSteps
             .max { $0.compilationEndTimestamp < $1.compilationEndTimestamp }
-        guard let lastStep = lastCompilationStep else {
+        let firstCompilationStep = compilationSteps
+            .min { $0.compilationEndTimestamp < $1.compilationEndTimestamp }
+        guard let lastStep = lastCompilationStep, let firstStep = firstCompilationStep else {
             return app.with(newCompilationEndTimestamp: app.startTimestamp,
                             andCompilationDuration: 0.0)
         }
         return app.with(newCompilationEndTimestamp: lastStep.compilationEndTimestamp,
-                         andCompilationDuration: lastStep.compilationEndTimestamp - app.startTimestamp)
+                         andCompilationDuration: lastStep.compilationEndTimestamp - firstStep.compilationEndTimestamp + firstStep.compilationDuration)
     }
 
 }

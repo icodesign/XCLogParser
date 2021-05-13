@@ -347,7 +347,7 @@ function drawTimeline(currentTarget) {
 
     const compilationSeries = targets.map(function (target) {
         const title = getShortFilename(target.title, target.architecture);
-        const targetStartTimestamp = target.startTimestamp;
+        const targetStartTimestamp = target.compilationEndTimestamp - target.compilationDuration;
         const targetEndTimestamp = target.compilationEndTimestamp;
         const start = targetStartTimestamp;
         const end = targetEndTimestamp === targetStartTimestamp ? targetEndTimestamp + 1 : targetEndTimestamp;
@@ -361,13 +361,22 @@ function drawTimeline(currentTarget) {
         };
     });
 
+    const annotations = targets.map(function (target) {
+        const targetStartTimestamp = target.compilationEndTimestamp - target.compilationDuration;
+        const start = new Date(targetStartTimestamp * 1000).getTime();
+
+        return {
+            x: start,
+            borderColor: '#775DD0',
+        };
+    });
 
     var options = {
         series: [
-            {
-                name: 'Build time',
-                data: dataSeries
-            },
+            // {
+            //     name: 'Build time',
+            //     data: dataSeries
+            // },
             {
                 name: 'Compilation time',
                 data: compilationSeries
@@ -424,6 +433,9 @@ function drawTimeline(currentTarget) {
                 },
             },
 
+        },
+        annotations: {
+            xaxis: annotations
         }
     };
 
@@ -1046,7 +1058,7 @@ public static let indexHTML =
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.23.0/moment-with-locales.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   <script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
-    <script type="text/javascript" src="js/{{app_file}}"></script>
+  <script type="text/javascript" src="js/{{app_file}}"></script>
 </body>
 </html>
 
@@ -1302,7 +1314,7 @@ public static let stepHTML =
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.1.2/handlebars.min.js"></script>
-      <script type="text/javascript" src="js/{{data_file}}"></script>
+  <script type="text/javascript" src="js/{{data_file}}"></script>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.23.0/moment-with-locales.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   <script type="text/javascript" src="js/step.js"></script>

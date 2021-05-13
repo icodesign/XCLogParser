@@ -255,7 +255,7 @@ function drawTimeline(currentTarget) {
 
     const compilationSeries = targets.map(function (target) {
         const title = getShortFilename(target.title, target.architecture);
-        const targetStartTimestamp = target.startTimestamp;
+        const targetStartTimestamp = target.compilationEndTimestamp - target.compilationDuration;
         const targetEndTimestamp = target.compilationEndTimestamp;
         const start = targetStartTimestamp;
         const end = targetEndTimestamp === targetStartTimestamp ? targetEndTimestamp + 1 : targetEndTimestamp;
@@ -269,13 +269,22 @@ function drawTimeline(currentTarget) {
         };
     });
 
+    const annotations = targets.map(function (target) {
+        const targetStartTimestamp = target.compilationEndTimestamp - target.compilationDuration;
+        const start = new Date(targetStartTimestamp * 1000).getTime();
+
+        return {
+            x: start,
+            borderColor: '#775DD0',
+        };
+    });
 
     var options = {
         series: [
-            {
-                name: 'Build time',
-                data: dataSeries
-            },
+            // {
+            //     name: 'Build time',
+            //     data: dataSeries
+            // },
             {
                 name: 'Compilation time',
                 data: compilationSeries
@@ -332,6 +341,9 @@ function drawTimeline(currentTarget) {
                 },
             },
 
+        },
+        annotations: {
+            xaxis: annotations
         }
     };
 
